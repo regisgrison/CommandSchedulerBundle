@@ -80,6 +80,9 @@ class CommandParser
      */
     private function extractCommandsFromXML($xml)
     {
+        // cleanup warnings
+        $xml = preg_replace('/^.+<\?xml /ms', '<?xml ', $xml);
+
         if ('' == $xml) {
             return [];
         }
