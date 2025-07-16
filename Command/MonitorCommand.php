@@ -90,7 +90,7 @@ class MonitorCommand extends Command
      *
      * @return int|void|null
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // If not in dump mode and none receiver is set, exit.
         $this->dumpMode = $input->getOption('dump');

@@ -102,7 +102,7 @@ class UnlockCommand extends Command
      *
      * @return int|void|null
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (false === $this->unlockAll && null === $this->scheduledCommandName) {
             $output->writeln('Either the name of a scheduled command or the --all option must be set.');
