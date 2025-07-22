@@ -231,6 +231,8 @@ class ExecuteCommand extends Command
 				'message' => 'Invalid arguments',
 				'trace' => $e->getTraceAsString()
 			]));
+
+			return;
 		}
 
         // Disable interactive mode if the current command has no-interaction flag
