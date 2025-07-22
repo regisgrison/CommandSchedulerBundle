@@ -13,7 +13,7 @@ use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
-use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Class ExecuteCommand : This class is the entry point to execute all scheduled command.
@@ -26,6 +26,11 @@ class ExecuteCommand extends Command
      * @var \Doctrine\ORM\EntityManager
      */
     private $em;
+
+    /**
+     * @var \Symfony\Contracts\EventDispatcher\EventDispatcherInterface
+     */
+    private EventDispatcherInterface $dispatcher;
 
     /**
      * @var string
@@ -49,9 +54,10 @@ class ExecuteCommand extends Command
      * @param $managerName
      * @param $logPath
      */
-    public function __construct(ManagerRegistry $managerRegistry, $managerName, $logPath)
+    public function __construct(ManagerRegistry $managerRegistry, EventDispatcherInterface $dispatcher, $managerName, $logPath)
     {
         $this->em = $managerRegistry->getManager($managerName);
+        $this->dispatcher = $dispatcher;
         $this->logPath = $logPath;
 
         // If logpath is not set to false, append the directory separator to it
@@ -167,8 +173,6 @@ class ExecuteCommand extends Command
      */
     private function executeCommand(ScheduledCommand $scheduledCommand, OutputInterface $output, InputInterface $input)
     {
-	    $dispatcher = new EventDispatcher();
-
 	    //reload command from database before every execution to avoid parallel execution
         $this->em->getConnection()->beginTransaction();
         try {
@@ -208,7 +212,7 @@ class ExecuteCommand extends Command
             $scheduledCommand->setLastReturnCode(-1);
             $output->writeln('<error>Cannot find '.$scheduledCommand->getCommand().'</error>');
 
-	        $dispatcher->dispatch(new CommandFailedEvent([
+	        $this->dispatcher->dispatch(new CommandFailedEvent([
 		        'command' => $scheduledCommand->getCommand(),
 		        'arguments' => $scheduledCommand->getArguments(),
 		        'message' => 'Invalid command',
@@ -225,7 +229,7 @@ class ExecuteCommand extends Command
 		try {
             $input->bind($command->getDefinition());
 		} catch (\LogicException|\RuntimeException $e) {
-			$dispatcher->dispatch(new CommandFailedEvent([
+			$this->dispatcher->dispatch(new CommandFailedEvent([
 				'command' => $scheduledCommand->getCommand(),
 				'arguments' => $scheduledCommand->getArguments(),
 				'message' => 'Invalid arguments',
@@ -265,7 +269,7 @@ class ExecuteCommand extends Command
             $logOutput->writeln($e->getTraceAsString());
             $result = -1;
 
-			$dispatcher->dispatch(new CommandFailedEvent([
+			$this->dispatcher->dispatch(new CommandFailedEvent([
 				'command' => $scheduledCommand->getCommand(),
 				'arguments' => $scheduledCommand->getArguments(),
 				'message' => $e->getMessage(),

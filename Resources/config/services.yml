@@ -30,6 +30,7 @@ services:
     JMose\CommandSchedulerBundle\Command\ExecuteCommand:
         arguments:
             - "@doctrine"
+            - "@event_dispatcher"
             - "%jmose_command_scheduler.doctrine_manager%"
             - "%jmose_command_scheduler.log_path%"
         tags: [console.command]
@@ -43,7 +44,7 @@ services:
             - "%jmose_command_scheduler.monitor_mail_subject%"
             - "%jmose_command_scheduler.send_ok%"
         tags: [console.command]
-        
+
     JMose\CommandSchedulerBundle\Command\UnlockCommand:
         arguments:
             - "@doctrine"
