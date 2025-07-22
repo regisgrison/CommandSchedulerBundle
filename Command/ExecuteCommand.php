@@ -211,7 +211,7 @@ class ExecuteCommand extends Command
 	        $dispatcher->dispatch(new CommandFailedEvent([
 		        'command' => $scheduledCommand->getCommand(),
 		        'arguments' => $scheduledCommand->getArguments(),
-		        'message' => 'Invalid arguments',
+		        'message' => 'Invalid command',
 		        'trace' => $e->getTraceAsString()
 	        ]));
 
@@ -222,7 +222,16 @@ class ExecuteCommand extends Command
             $scheduledCommand->getCommand().' '.$scheduledCommand->getArguments().' --env='.$input->getOption('env')
         );
         $command->mergeApplicationDefinition();
-        $input->bind($command->getDefinition());
+		try {
+            $input->bind($command->getDefinition());
+		} catch (\LogicException|\RuntimeException $e) {
+			$dispatcher->dispatch(new CommandFailedEvent([
+				'command' => $scheduledCommand->getCommand(),
+				'arguments' => $scheduledCommand->getArguments(),
+				'message' => 'Invalid arguments',
+				'trace' => $e->getTraceAsString()
+			]));
+		}
 
         // Disable interactive mode if the current command has no-interaction flag
         if (true === $input->hasParameterOption(['--no-interaction', '-n'])) {
