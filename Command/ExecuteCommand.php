@@ -4,6 +4,7 @@ namespace JMose\CommandSchedulerBundle\Command;
 
 use Cron\CronExpression;
 use JMose\CommandSchedulerBundle\Entity\ScheduledCommand;
+use JMose\CommandSchedulerBundle\Event\CommandFailedEvent;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Class ExecuteCommand : This class is the entry point to execute all scheduled command.
@@ -165,7 +167,9 @@ class ExecuteCommand extends Command
      */
     private function executeCommand(ScheduledCommand $scheduledCommand, OutputInterface $output, InputInterface $input)
     {
-        //reload command from database before every execution to avoid parallel execution
+	    $dispatcher = new EventDispatcher();
+
+	    //reload command from database before every execution to avoid parallel execution
         $this->em->getConnection()->beginTransaction();
         try {
             $notLockedCommand = $this
@@ -203,6 +207,13 @@ class ExecuteCommand extends Command
         } catch (\InvalidArgumentException $e) {
             $scheduledCommand->setLastReturnCode(-1);
             $output->writeln('<error>Cannot find '.$scheduledCommand->getCommand().'</error>');
+
+	        $dispatcher->dispatch(new CommandFailedEvent([
+		        'command' => $scheduledCommand->getCommand(),
+		        'arguments' => $scheduledCommand->getArguments(),
+		        'message' => 'Invalid arguments',
+		        'trace' => $e->getTraceAsString()
+	        ]));
 
             return;
         }
@@ -242,6 +253,13 @@ class ExecuteCommand extends Command
             $logOutput->writeln($e->getMessage());
             $logOutput->writeln($e->getTraceAsString());
             $result = -1;
+
+			$dispatcher->dispatch(new CommandFailedEvent([
+				'command' => $scheduledCommand->getCommand(),
+				'arguments' => $scheduledCommand->getArguments(),
+				'message' => $e->getMessage(),
+				'trace' => $e->getTraceAsString()
+			]));
         }
 
         if (false === $this->em->isOpen()) {
